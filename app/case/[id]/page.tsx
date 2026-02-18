@@ -1,85 +1,43 @@
-import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { articles, getArticleById } from "@/lib/cases";
+import { prisma } from '@/lib/prisma';
+import { notFound } from 'next/navigation';
+import Timeline from '@/components/Timeline';
+import GovernmentResponse from '@/components/GovernmentResponse';
 
-type CasePageProps = {
-  params: Promise<{ id: string }>;
-};
-
-export async function generateStaticParams() {
-  return articles.map((article) => ({ id: article.id }));
-}
-
-export async function generateMetadata({ params }: CasePageProps): Promise<Metadata> {
-  const { id } = await params;
-  const article = getArticleById(id);
-
-  if (!article) {
-    return {
-      title: "Article Not Found | Jyothi News",
-      description: "The requested article does not exist.",
-    };
-  }
-
-  return {
-    title: article.seo.title,
-    description: article.seo.description,
-    keywords: article.seo.keywords,
-    openGraph: {
-      title: article.seo.title,
-      description: article.seo.description,
-      type: "article",
-      images: [{ url: article.heroImage }],
+export default async function CasePage({ params }: { params: { id: string } }) {
+  const caseItem = await prisma.case.findUnique({
+    where: { id: params.id },
+    include: {
+      timeline: { orderBy: { date: 'desc' } },
+      governmentResponses: true,
     },
-    twitter: {
-      card: "summary_large_image",
-      title: article.seo.title,
-      description: article.seo.description,
-      images: [article.heroImage],
-    },
-  };
-}
+  });
 
-export default async function CasePage({ params }: CasePageProps) {
-  const { id } = await params;
-  const article = getArticleById(id);
-
-  if (!article) {
-    notFound();
-  }
+  if (!caseItem) notFound();
 
   return (
-    <main className="mx-auto min-h-screen max-w-4xl px-5 py-8 md:px-10">
-      <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-900">
-        ← Back to all case studies
-      </Link>
+    <article className="container mx-auto p-4 max-w-4xl">
+      <h1 className="text-3xl font-bold mb-2">{caseItem.title}</h1>
+      <div className="text-gray-600 mb-4">
+        <span>{caseItem.category} · {caseItem.location}</span>
+        <span className="mx-2">·</span>
+        <span>Incident: {new Date(caseItem.dateOfIncident).toLocaleDateString()}</span>
+      </div>
+      <div className="prose lg:prose-xl mb-6">
+        <p className="text-lg">{caseItem.summary}</p>
+        <div dangerouslySetInnerHTML={{ __html: caseItem.detailedSummary }} />
+      </div>
+      
+      <section className="mb-6">
+        <h2 className="text-2xl font-semibold mb-2">Legal Status</h2>
+        <p>{caseItem.legalStatus}</p>
+        {caseItem.compensationAnnounced && (
+          <p>Compensation announced: {caseItem.compensationAnnounced}</p>
+        )}
+        <p>Status: <span className="font-medium">{caseItem.status.replace('-', ' ')}</span></p>
+      </section>
 
-      <article className="mt-4">
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-          <span>{article.year}</span>
-          <span>•</span>
-          <span>{article.sector}</span>
-          <span>•</span>
-          <span>{article.publishedAt}</span>
-        </div>
-        <h1 className="text-3xl font-bold leading-tight md:text-4xl">{article.title}</h1>
-        <p className="mt-3 text-lg text-zinc-700">{article.summary}</p>
-        <p className="mt-2 text-sm text-zinc-500">By {article.author}</p>
-
-        <div className="relative mt-6 h-60 w-full overflow-hidden rounded-xl md:h-96">
-          <Image src={article.heroImage} alt={article.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 896px" />
-        </div>
-
-        <div className="mt-6 space-y-4 text-zinc-800">
-          {article.body.map((paragraph, index) => (
-            <p key={index} className="leading-8">
-              {paragraph}
-            </p>
-          ))}
-        </div>
-      </article>
-    </main>
+      <GovernmentResponse responses={caseItem.governmentResponses} />
+      <Timeline events={caseItem.timeline} />
+    </article>
   );
 }
