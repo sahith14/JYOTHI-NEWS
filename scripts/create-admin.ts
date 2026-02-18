@@ -12,4 +12,6 @@ async function main() {
   console.log('Admin created');
 }
 
-main();
+main()
+  .catch(e => console.error(e))
+  .finally(async () => await prisma.$disconnect());
