@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { allSectors, allYears } from "@/lib/cases";
 
@@ -15,20 +15,24 @@ type DraftArticle = {
 const STORAGE_KEY = "jyothi-admin-drafts";
 
 export default function AdminPage() {
-  const [drafts, setDrafts] = useState<DraftArticle[]>([]);
-  const [statusMessage, setStatusMessage] = useState("");
-
-  useEffect(() => {
-    const rawDrafts = window.localStorage.getItem(STORAGE_KEY);
-    if (!rawDrafts) {
-      return;
+  const [drafts, setDrafts] = useState<DraftArticle[]>(() => {
+    if (typeof window === "undefined") {
+      return [];
     }
 
-    const parsed = JSON.parse(rawDrafts) as DraftArticle[];
-    setDrafts(parsed);
-  }, []);
+    const rawDrafts = window.localStorage.getItem(STORAGE_KEY);
+    if (!rawDrafts) {
+      return [];
+    }
 
-  const latestYear = useMemo(() => allYears[0] ?? new Date().getFullYear(), []);
+    try {
+      return JSON.parse(rawDrafts) as DraftArticle[];
+    } catch {
+      return [];
+    }
+  });
+  const [statusMessage, setStatusMessage] = useState("");
+  const latestYear = allYears[0] ?? new Date().getFullYear();
 
   function persist(nextDrafts: DraftArticle[]) {
     setDrafts(nextDrafts);
