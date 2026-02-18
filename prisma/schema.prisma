@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Case {
+  id                  String   @id @default(cuid())
+  title               String
+  slug                String   @unique
+  category            String
+  location            String
+  dateOfIncident      DateTime
+  lastUpdated         DateTime @updatedAt
+  summary             String   @db.Text
+  detailedSummary     String   @db.Text
+  status              String
+  legalStatus         String   @db.Text
+  compensationAnnounced String?
+  isClosed            Boolean  @default(false)
+  images              String[] // JSON
+  tags                String[] // JSON
+  internalNotes       String?  @db.Text
+  sources             String?  @db.Text // JSON string of source URLs
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  timeline            TimelineEvent[]
+  governmentResponses GovernmentResponse[]
+}
+
+model TimelineEvent {
+  id          String   @id @default(cuid())
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  date        DateTime
+  title       String
+  description String   @db.Text
+  source      String?
+}
+
+model GovernmentResponse {
+  id               String   @id @default(cuid())
+  caseId           String
+  case             Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  announcements    String[] // JSON
+  compensation     String?
+  officialStatements String[] // JSON
+  filedFIR         Boolean?
+  arrests          Int?
+  chargesheetFiled Boolean?
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   // hashed
+  createdAt DateTime @default(now())
+}
