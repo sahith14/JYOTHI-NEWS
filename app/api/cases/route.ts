@@ -5,7 +5,10 @@ export async function GET() {
   try {
     const cases = await prisma.case.findMany({
       include: {
-        timeline: true,
+        timeline: {
+          orderBy: { date: 'desc' },
+          take: 1, // just the latest update for summary
+        },
         governmentResponses: true,
       },
       orderBy: { lastUpdated: 'desc' },
